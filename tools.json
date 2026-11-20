@@ -1,0 +1,349 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Video2Knowledge Agent Tools",
+  "version": "0.2.0",
+  "description": "CLI tool contracts for converting multimedia and documents into searchable, evidence-grounded knowledge.",
+  "runtime": {
+    "working_directory": "video2knowledge-skill",
+    "python_module": "video2knowledge.cli",
+    "environment": "PYTHONPATH=src"
+  },
+  "tools": [
+    {
+      "name": "video2knowledge_ingest",
+      "description": "Convert a supported file into a knowledge pack containing chunks, timelines, summaries, and evidence.",
+      "command": "python -m video2knowledge.cli ingest <input> --output <knowledge_dir>",
+      "input_schema": {
+        "type": "object",
+        "required": ["input", "output"],
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Path to .txt, .md, .srt, .vtt, .pdf, .docx, .pptx, .csv, .xlsx, .json, or supported video."
+          },
+          "output": {
+            "type": "string",
+            "description": "Directory to create or update for the knowledge pack."
+          },
+          "transcribe": {
+            "type": "boolean",
+            "default": false,
+            "description": "For video, enable faster-whisper transcription."
+          },
+          "model_size": {
+            "type": "string",
+            "enum": ["tiny", "base", "small", "medium", "large-v3"],
+            "default": "small"
+          },
+          "language": {
+            "type": ["string", "null"],
+            "description": "Optional language code such as zh or en."
+          },
+          "device": {
+            "type": "string",
+            "enum": ["auto", "cpu", "cuda"],
+            "default": "auto"
+          },
+          "compute_type": {
+            "type": "string",
+            "default": "int8"
+          },
+          "frame_interval": {
+            "type": "number",
+            "minimum": 0.1,
+            "default": 5.0
+          },
+          "describe_frames": {
+            "type": "boolean",
+            "default": false,
+            "description": "For video, call the configured vision model for keyframe descriptions."
+          }
+        }
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "knowledge_dir": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_index",
+      "description": "Build or rebuild the local TF-IDF vector index for an existing knowledge pack.",
+      "command": "python -m video2knowledge.cli index <knowledge_dir>",
+      "input_schema": {
+        "type": "object",
+        "required": ["knowledge_dir"],
+        "properties": {
+          "knowledge_dir": {"type": "string"}
+        }
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string"},
+          "path": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_ingest_many",
+      "description": "Combine several supported files into one collection that can be searched across sources.",
+      "command": "python -m video2knowledge.cli ingest-many <input1> <input2> --output <knowledge_dir>",
+      "input_schema": {
+        "type": "object",
+        "required": ["inputs", "output"],
+        "properties": {
+          "inputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"}
+          },
+          "output": {"type": "string"},
+          "transcribe": {"type": "boolean", "default": false},
+          "model_size": {"type": "string", "default": "small"},
+          "language": {"type": ["string", "null"]},
+          "device": {"type": "string", "default": "auto"},
+          "compute_type": {"type": "string", "default": "int8"},
+          "frame_interval": {"type": "number", "minimum": 0.1, "default": 5.0},
+          "describe_frames": {"type": "boolean", "default": false}
+        }
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "knowledge_dir": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_ask",
+      "description": "Return the best matching evidence chunks without generating an answer.",
+      "command": "python -m video2knowledge.cli ask <knowledge_dir> <question> --mode auto",
+      "input_schema": {
+        "type": "object",
+        "required": ["knowledge_dir", "question"],
+        "properties": {
+          "knowledge_dir": {"type": "string"},
+          "question": {"type": "string"},
+          "limit": {"type": "integer", "minimum": 1, "default": 5},
+          "mode": {
+            "type": "string",
+            "enum": ["auto", "vector", "lexical", "hybrid"],
+            "default": "auto"
+          },
+          "min_score": {"type": "number", "minimum": 0, "default": 0.05}
+        }
+      },
+      "result": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/match"
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_inspect",
+      "description": "Inspect available modalities, retrieval status, and processing warnings in a knowledge pack.",
+      "command": "python -m video2knowledge.cli inspect <knowledge_dir>",
+      "input_schema": {
+        "type": "object",
+        "required": ["knowledge_dir"],
+        "properties": {
+          "knowledge_dir": {"type": "string"}
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["knowledge_dir", "chunk_count", "modalities", "warnings"],
+        "properties": {
+          "knowledge_dir": {"type": "string"},
+          "chunk_count": {"type": "integer"},
+          "modalities": {"type": "object"},
+          "retrieval": {"type": "object"},
+          "warnings": {"type": "array", "items": {"type": "string"}},
+          "manifest": {"type": "object"}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_doctor",
+      "description": "Check local dependencies, binaries, API configuration, and optional capabilities.",
+      "command": "python -m video2knowledge.cli doctor",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "result": {
+        "type": "object",
+        "required": ["ready", "checks", "capabilities"],
+        "properties": {
+          "ready": {"type": "boolean"},
+          "checks": {"type": "object"},
+          "capabilities": {"type": "array", "items": {"type": "string"}},
+          "hint": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_report",
+      "description": "Build a deterministic Markdown study report with source locations and processing warnings.",
+      "command": "python -m video2knowledge.cli report <knowledge_dir> --output <report.md>",
+      "input_schema": {
+        "type": "object",
+        "required": ["knowledge_dir"],
+        "properties": {
+          "knowledge_dir": {"type": "string"},
+          "output": {"type": ["string", "null"]},
+          "max_points": {"type": "integer", "minimum": 1, "default": 12}
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["knowledge_dir", "key_point_count", "warnings"],
+        "properties": {
+          "knowledge_dir": {"type": "string"},
+          "output": {"type": ["string", "null"]},
+          "key_point_count": {"type": "integer"},
+          "warnings": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_answer",
+      "description": "Answer a question from retrieved chunks and return citations with source locations.",
+      "command": "python -m video2knowledge.cli answer <knowledge_dir> <question> --mode auto",
+      "input_schema": {
+        "type": "object",
+        "required": ["knowledge_dir", "question"],
+        "properties": {
+          "knowledge_dir": {"type": "string"},
+          "question": {"type": "string"},
+          "limit": {"type": "integer", "minimum": 1, "default": 5},
+          "mode": {
+            "type": "string",
+            "enum": ["auto", "vector", "lexical", "hybrid"],
+            "default": "auto"
+          },
+          "min_score": {"type": "number", "minimum": 0, "default": 0.05},
+          "llm": {
+            "type": "boolean",
+            "default": false,
+            "description": "Use a configured compatible Chat Completions model; otherwise use local extractive answering."
+          },
+          "output": {
+            "type": ["string", "null"],
+            "description": "Optional JSON output path."
+          }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["question", "answer", "citations", "matches"],
+        "properties": {
+          "question": {"type": "string"},
+          "answer": {"type": "string"},
+          "mode": {"type": "string"},
+          "retrieval": {"type": "string"},
+          "min_score": {"type": "number"},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low", "none"]},
+          "evidence_status": {"type": "string", "enum": ["sufficient", "insufficient"]},
+          "citations": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/citation"}
+          },
+          "matches": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/match"}
+          }
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_describe",
+      "description": "Describe already extracted keyframes with a configured vision model.",
+      "command": "python -m video2knowledge.cli describe <frames_dir> --output <output>",
+      "input_schema": {
+        "type": "object",
+        "required": ["frames_dir", "output"],
+        "properties": {
+          "frames_dir": {"type": "string"},
+          "output": {"type": "string"},
+          "model": {"type": ["string", "null"]}
+        }
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string"},
+          "count": {"type": "integer"},
+          "described_count": {"type": "integer"},
+          "frames": {"type": "array"}
+        }
+      }
+    },
+    {
+      "name": "video2knowledge_evaluate",
+      "description": "Run a JSONL evaluation set and report retrieval coverage and citation presence.",
+      "command": "python -m video2knowledge.cli evaluate <knowledge_dir> <cases> --mode auto",
+      "input_schema": {
+        "type": "object",
+        "required": ["knowledge_dir", "cases"],
+        "properties": {
+          "knowledge_dir": {"type": "string"},
+          "cases": {"type": "string", "description": "Path to newline-delimited JSON cases."},
+          "limit": {"type": "integer", "minimum": 1, "default": 5},
+          "mode": {
+            "type": "string",
+            "enum": ["auto", "vector", "lexical", "hybrid"],
+            "default": "auto"
+          },
+          "min_score": {"type": "number", "minimum": 0, "default": 0.05},
+          "output": {"type": ["string", "null"]}
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["case_count", "retrieval_pass_rate", "citation_pass_rate", "overall_pass", "results"],
+        "properties": {
+          "case_count": {"type": "integer"},
+          "retrieval_pass_rate": {"type": "number"},
+          "citation_pass_rate": {"type": "number"},
+          "overall_pass": {"type": "boolean"},
+          "results": {"type": "array"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "citation": {
+      "type": "object",
+      "required": ["id", "source", "location", "modality"],
+      "properties": {
+        "id": {"type": "integer"},
+        "source": {"type": ["string", "null"]},
+        "location": {"type": ["string", "null"]},
+        "modality": {"type": "string", "enum": ["audio", "vision", "text"]},
+        "start_seconds": {"type": ["number", "null"]},
+        "end_seconds": {"type": ["number", "null"]},
+        "chunk_id": {"type": ["string", "null"]}
+      }
+    },
+    "match": {
+      "type": "object",
+      "required": ["text", "source", "location"],
+      "properties": {
+        "id": {"type": "string"},
+        "text": {"type": "string"},
+        "source": {"type": ["string", "null"]},
+        "location": {"type": ["string", "null"]},
+        "modality": {"type": "string", "enum": ["audio", "vision", "text"]},
+        "start_seconds": {"type": ["number", "null"]},
+        "end_seconds": {"type": ["number", "null"]},
+        "score": {"type": "number"},
+        "retrieval": {"type": "string"}
+      }
+    }
+  }
+}
+

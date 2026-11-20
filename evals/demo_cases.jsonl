@@ -1,0 +1,2 @@
+{"id":"rag-purpose","question":"RAG 的主要作用是什么？","expected_terms":["检索","降低幻觉"]}
+{"id":"video-evidence","question":"视频知识库为什么要保留时间戳？","expected_terms":["时间戳","原始视频"]}
