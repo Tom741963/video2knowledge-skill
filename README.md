@@ -1,5 +1,7 @@
 # Video2Knowledge Skill
 
+让 AI Agent 从视频、字幕和文档中构建带时间戳与来源引用的可检索知识库，支持多模态摄取、RAG 问答、评测和 MCP 接入。
+
 把视频、字幕和文档转换成带来源定位的结构化知识包，供 AI Agent 后续检索、问答和生成学习资料。
 
 项目包含 GitHub Actions CI，会在 push 和 pull request 时使用 Python 3.10、3.11、3.12 检查工具契约、Skill frontmatter 和测试。
